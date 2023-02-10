@@ -16,7 +16,7 @@ from polymath import get_completion, get_max_tokens_for_completion_model
 from google.cloud import datastore
 client = datastore.Client()
 
-DEFAULT_TOKEN_COUNT = 3000  # get_max_tokens_for_completion_model()
+DEFAULT_TOKEN_COUNT = 2000  # get_max_tokens_for_completion_model()
 answer_length = 256
 PROMPT_LENGTH = 108  # with markdown arg
 MAX_QUERY_LENGTH = 200  # characters not tokens
@@ -71,7 +71,7 @@ class Endpoint:
                 tz=datetime.timezone.utc) - datetime.timedelta(days=1))
             dsquery.keys_only()
             ask_count = len(list(dsquery.fetch()))
-            if ask_count > 8:
+            if ask_count > 6:
                 return jsonify({
                     "error": f"Too many requests. Please try again later or include your OpenAI API key."
                 }), 429
@@ -127,8 +127,9 @@ def index():
         })
 
     except Exception as e:
+        print(f"{e}\n{traceback.format_exc()}")
         return jsonify({
-            "error": f"{e}\n{traceback.format_exc()}"
+            "error": f"{e}"
         })
 
 
