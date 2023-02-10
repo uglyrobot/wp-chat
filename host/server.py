@@ -3,21 +3,25 @@ import traceback
 
 from flask import Flask, jsonify, render_template, request, redirect
 from flask_compress import Compress
+from flask_cors import CORS
 
 import polymath
 from polymath.config.json import JSON
 from polymath.config.env import Env
 from polymath import get_completion, get_max_tokens_for_completion_model
 
-DEFAULT_TOKEN_COUNT = 1000
-answer_length = 512
-# TODO: we need to allow room for the actual prompt, as well as separators
+DEFAULT_TOKEN_COUNT = 3000 #get_max_tokens_for_completion_model()
+answer_length = 256
+PROMPT_LENGTH = 108 #with markdown arg
+MAX_QUERY_LENGTH = 200 #characters not tokens
+# We need to allow room for the actual prompt, as well as separators
 # between bits. This is a hand-tuned margin, but it should be calculated
 # automatically.
-context_count = get_max_tokens_for_completion_model() - 500 - answer_length
+context_count = DEFAULT_TOKEN_COUNT - PROMPT_LENGTH - ( MAX_QUERY_LENGTH / 4 ) - answer_length
 
 app = Flask(__name__)
 Compress(app)
+CORS(app)
 
 env_config = Env.load_environment_config()
 host_config = JSON.load_host_config()
@@ -36,9 +40,9 @@ class Endpoint:
     # ask endpoint, passing in a query arg via POST
     def ask(self, args: dict[str, str]):
         # return 400 if no query is passed
-        if 'query' not in args or not args['query'].strip() or len(args['query'].strip()) < 10:
+        if 'query' not in args or not args['query'].strip() or len(args['query'].strip()) < 10 or len(args['query'].strip()) > MAX_QUERY_LENGTH:
             return jsonify({
-                "error": "Missing or invalid 'query' parameter. Must be at least 10 characters."
+                "error": f"Missing or invalid 'query' parameter. Must be between 10 and {MAX_QUERY_LENGTH} characters."
             }), 400
         query = args['query'].strip()
 
@@ -56,7 +60,7 @@ class Endpoint:
         sources = [{"url": info.url, "title": info.title} for info in sliced_library.unique_infos]
         context = sliced_library.text
         
-        prompt = f"You are the \"WP Docs Bot\" created by Aaron Edwards (@UglyRobotDev) of Imajinn AI. Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below, say \"I'm not sure\" and suggest looking for this information on https://wordpress.org.{formatcode}\n\nContext:\n{context} \n\nQuestion:\n{query}\n\nAnswer{formatstring}:"
+        prompt = f"You are the \"ChatWP Bot\" created by Aaron Edwards (@UglyRobotDev) of Imajinn AI. Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below, say \"I'm not sure\" and suggest looking for this information on [wordpress.org](https://wordpress.org).{formatcode}\n\nContext:\n{context} \n\nQuestion:\n{query}\n\nAnswer{formatstring}:"
         result = get_completion(prompt, answer_length=answer_length)
         return jsonify({"answer": result, "sources": sources})
 
@@ -91,8 +95,9 @@ def ask():
         })
 
     except Exception as e:
+        print(f"{e}\n{traceback.format_exc()}")
         return jsonify({
-            "error": f"{e}\n{traceback.format_exc()}"
+            "error": f"{e}"
         })
 
 if __name__ == "__main__":
