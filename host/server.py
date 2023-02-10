@@ -61,8 +61,9 @@ class Endpoint:
         ip = request.headers.get('X-Appengine-User-IP', request.remote_addr)
         iphash = hashlib.sha256(ip.encode('utf-8')).hexdigest()
 
-        if 'openai_api_key' in args and len(args['openai_api_key'].strip()) > 20:
-            openai.api_key = args['openai_api_key'].strip()
+        openai_api_key = request.headers.get('x-openai-api-key', False)
+        if openai_api_key and len(openai_api_key) > 20:
+            openai.api_key = openai_api_key.strip()
         else:
             # get count of asks from this iphash in the last 24 hours
             dsquery = client.query(kind="Ask")
