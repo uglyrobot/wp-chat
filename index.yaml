@@ -1,0 +1,6 @@
+indexes:
+- kind: Ask
+  properties:
+  - name: iphash
+  - name: created
+    direction: desc

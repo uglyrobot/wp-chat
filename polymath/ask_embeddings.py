@@ -23,10 +23,9 @@ def get_embedding_model_name_from_id(model_id):
     return model_id.split(':')[1]
 
 
-def get_embedding(text, model_id=Library.EMBEDDINGS_MODEL_ID):
+def get_embedding(text, model_id=Library.EMBEDDINGS_MODEL_ID, retry_count=10):
     # Occasionally, API returns an error.
     # Retry a few times before giving up.
-    retry_count = 10
     result = None
     while retry_count > 0:
         try:
@@ -37,9 +36,12 @@ def get_embedding(text, model_id=Library.EMBEDDINGS_MODEL_ID):
             break
         except Exception as e:
             print(f'openai.Embedding.create error: {e}')
-            print("Retrying in 20 seconds ...")
-            sleep(20)
-            retry_count -= 1
+            if "Incorrect API key" in str(e) or "No API key" in str(e):
+                retry_count = 0
+            else:
+                print("Retrying in 20 seconds ...")
+                sleep(20)
+                retry_count -= 1
     if result is None:
         return None
     else:

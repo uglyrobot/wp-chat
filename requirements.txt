@@ -72,4 +72,4 @@ wcwidth==0.2.5
 Werkzeug==2.2.2
 wpparser==1.1.2
 overrides
-google-cloud-firestore
+google-cloud-datastore==2.13.2

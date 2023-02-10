@@ -14,3 +14,4 @@ package-lock.json
 
 # local-only dir as a scratch space
 scratch/
+env_vars.yaml
