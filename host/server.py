@@ -87,7 +87,7 @@ class Endpoint:
         query_embedding = polymath.get_embedding(query, self.library.EMBEDDINGS_MODEL_ID, 1)
         if query_embedding is None:
             return jsonify({
-                "error": f"OpenAI API key is invalid."
+                "error": f"OpenAI API error. Please try again later."
             }), 403
 
         self.library.compute_similarities(query_embedding)
@@ -97,12 +97,12 @@ class Endpoint:
                    for info in sliced_library.unique_infos]
         context = sliced_library.text
 
-        prompt = f"You are the \"ChatWP Bot\" created by Aaron Edwards (@UglyRobotDev). Answer the question as truthfully as possible using the provided context, and if the answer is not contained within the text below, say \"I'm not sure\" and suggest looking for this information on [wordpress.org](https://wordpress.org).{formatcode}\n\nContext:\n{context} \n\nQuestion:\n{query}\n\nAnswer{formatstring}:"
+        prompt = f"You are the \"ChatWP Bot\" created by Aaron Edwards (@UglyRobotDev). Answer the question as truthfully as possible using the provided context and your general knowledge of WordPress. Assume the question is related to WordPress and only answer questions about WordPress. Politely refuse to answer questions about specific themes and plugins because you don't want to give biased advice. If you do not know the answer do not make one up, but suggest looking for this information on [wordpress.org](https://wordpress.org). Do not suggest links to sites other than wordpress.org.{formatcode}\n\nContext:\n{context} \n\nQuestion:\n{query}\n\nAnswer{formatstring}:"
         result = get_completion(prompt, answer_length=answer_length)
 
         # Store iphash in google cloud datastore
         key = client.key("Ask")
-        ask = datastore.Entity(key, exclude_from_indexes=("result","sources",))
+        ask = datastore.Entity(key, exclude_from_indexes=("result","sources","queryEmbedding",))
         ask.update(
             {
                 "created": datetime.datetime.now(tz=datetime.timezone.utc),
@@ -111,6 +111,7 @@ class Endpoint:
                 "result": result,
                 "sources": sources,
                 "rating": 0,
+                "queryEmbedding": query_embedding, # store the embedding so that we can use it for clustering later
             }
         )
         client.put(ask)
